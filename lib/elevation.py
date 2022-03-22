@@ -6,7 +6,8 @@ import glob
 import pathlib
 
 class ElevationGetter():
-    # 緯度経度両方を格納するデータは緯度を先に格納すること
+    # 緯度経度両方を格納するデータは経度を先に格納すること
+    # matrixは横が第一次元
     OUT_OF_RANGE_ERROR = "範囲外です．"
     ALREADY_RENAMED = "すでにリネームされています"
 
