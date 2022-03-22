@@ -12,7 +12,7 @@ ALREADY_RENAMED = "すでにリネームされています"
 SETTINGS_FILE = "settings.json"
 GSI_DATA_FOLDER = "gsi_data_folder" # 国土地理院からダウンロードしたデータを入れたフォルダ
 CENTER_AREA_FOLDER = "5339" # 今回使うエリアのフォルダ 使える地域を広げたいときはこれを選べるように
-MAP_RANGE = [[139.0,140.0], [35.333333333, 36.0]] # 扱える範囲
+MAP_RANGE = [[35.333333333, 36.0], [139.0,140.0]] # 扱える範囲
 SPLIT_N_UNITS = [8, 10] 
 SPLIT_N = [SPLIT_N_UNITS[0], SPLIT_N_UNITS[0] * SPLIT_N_UNITS[1]] # フォルダの階層ごとのマップの分割数
 TARGET_FOLDER_SUFFIX = "DEM5A"
@@ -25,8 +25,7 @@ INVALID_VALUE = -1
 INVALID_TAG = "データなし"
 
 class ElevationGetter():
-    # 緯度経度両方を格納するデータは経度を先に格納すること
-    # matrixは横が第一次元
+    # 緯度経度両方を格納するデータは緯度を先に格納する
 
     def __init__(self, settings_file = SETTINGS_FILE):
         with open(settings_file) as f:
@@ -47,13 +46,13 @@ class ElevationGetter():
     
     # その座標のデータがどのファイルに属するか調べる
     # 返されるのはインデックスのみ
-    @classmethod
-    def searchFileIndices(cls, coordinates):
-        dividents = [co - ran[0] for co, ran in zip(coordinates, cls.MAP_RANGE)]
+    @staticmethod
+    def searchFileIndices(coordinates):
+        dividents = [co - ran[0] for co, ran in zip(coordinates, MAP_RANGE)]
         if(dividents[0] < 0 or dividents[1] < 0):
-            raise ValueError(cls.OUT_OF_RANGE_ERROR)
-        res = [[int(divident // divider) for divident, divider in zip(dividents, divider_list)] for divider_list in cls.DIVIDERS]
-        res = res[0] + [divident % (cls.SPLIT_N_UNITS[1]) for divident in res[1]]
+            raise ValueError(OUT_OF_RANGE_ERROR)
+        res = [[int(divident // divider) for divident, divider in zip(dividents, divider_list)] for divider_list in DIVIDERS]
+        res = res[0] + [divident % (SPLIT_N_UNITS[1]) for divident in res[1]]
         return res
 
         # resはファイルの番号を示すリストになる
@@ -62,8 +61,8 @@ class ElevationGetter():
     # searchFileIndicesで得たインデックスを入力して，目的のファイルのパスを得る
     def getFilePathFromIndices(self, indices):
         data_folder = os.path.join(self.settings[GSI_DATA_FOLDER], CENTER_AREA_FOLDER)
-        file_name = os.path.join(data_folder, FOLDER_PREFIX + str(indices[1]) + str(indices[0]))
-        file_name = os.path.join(file_name, "" + str(indices[3]) + str(indices[2]) + FILE_SUFFIX)
+        file_name = os.path.join(data_folder, FOLDER_PREFIX + str(indices[0]) + str(indices[1]))
+        file_name = os.path.join(file_name, "" + str(indices[2]) + str(indices[3]) + FILE_SUFFIX)
         return file_name
 
 
@@ -88,11 +87,11 @@ class ElevationGetter():
             os.rename(path, os.path.join(parent_path, path[-21:-19] + FILE_SUFFIX))
 
     # xmlファイルの標高データのパース時に使用
-    @classmethod
-    def elevationElementsParser(cls, element):
+    @staticmethod
+    def elevationElementsParser(element):
         element_list = element.split(",")
-        if(element_list[0] == cls.INVALID_TAG):
-            return cls.INVALID_VALUE
+        if(element_list[0] == INVALID_TAG):
+            return INVALID_VALUE
         return float(element_list[1])
 
 
@@ -106,7 +105,6 @@ class ElevationGetter():
         # 開始地点
         start_point = root[2][7][3][0][1].text
         start_point = [int(point) for point in start_point.split(" ")]
-        start_point.reverse() # 縦，横の順にする
 
         # 標高データを得る
         elevation = root[2][7][2][0][1].text.strip()
@@ -116,42 +114,41 @@ class ElevationGetter():
         data = None
         if(start_point[0] == 0 and start_point[1] == 0):
             # 全域にデータあり
-            data = np.array(elevation).reshape(cls.MATRIX_SIZE)
+            data = np.array(elevation).reshape(MATRIX_SIZE)
         else:
             # 途中からデータが始まる
-            data = cls.INVALID_VALUE * np.ones(cls.MATRIX_SIZE, dtype = np.float64)
-            if(start_point[0] != 0):
+            data = INVALID_VALUE * np.ones(MATRIX_SIZE, dtype = np.float64)
+            if(start_point[1] != 0):
                 # 横方向で途中からデータがあるとき
                 # 半端な一行と残りの行で別々に
-                strip = np.array(elevation[:cls.MATRIX_SIZE[1] - start_point[1]])
+                strip = np.array(elevation[:MATRIX_SIZE[1] - start_point[1]])
                 data[start_point[0], start_point[1]:] = strip
-                if(start_point[0] != cls.MATRIX_SIZE[0] - 1):
+                if(start_point[0] != MATRIX_SIZE[0] - 1):
                     # 最後の行にしかデータがないとき以外
-                    elevation = np.array(elevation[cls.MATRIX_SIZE[1] - start_point[1]:])
-                    elevation = elevation.reshape((-1, cls.MATRIX_SIZE[1]))
+                    elevation = np.array(elevation[MATRIX_SIZE[1] - start_point[1]:])
+                    elevation = elevation.reshape((-1, MATRIX_SIZE[1]))
                     data[start_point[0] + 1: ] = elevation
             else:
                 # データの始まりと行の始まりが一致
                 elevation = np.array(elevation)
-                elevation = elevation.reshape((-1, cls.MATRIX_SIZE[1]))
+                elevation = elevation.reshape((-1, MATRIX_SIZE[1]))
                 data[start_point[0]:] = elevation
+        return data
 
     # 入力された緯度，経度の標高を返す
     def getElevation(self, coordinates: list):
-        coordinates = coordinates.copy()
-        coordinates.reverse() # このライブラリでは経度，緯度の順で取り扱う
-
         indices = self.searchFileIndices(coordinates)
-        data = self.data[indices[0]][indices[1]][indices[2]][indices[3]]
+        data = self.data_list[indices[0]][indices[1]][indices[2]][indices[3]]
         if(data is None):
             # まだ読み込んでいない
             file_path = self.getFilePathFromIndices(indices)
             data = self.getElevationMatrixFromFile(file_path)
-            self.data[indices[0]][indices[1]][indices[2]][indices[3]] = data
+            self.data_list[indices[0]][indices[1]][indices[2]][indices[3]] = data
         
         # 余り
-        residence = [ coord % divider for coord, divider in zip(coordinates, DIVIDERS[1])]
-        ans_indices = [ int(res // divider) for res, divider in zip(residence, MINI_DIVIDER)]
+        residences = [ coord % divider for coord, divider in zip(coordinates, DIVIDERS[1])]
+        residences[0] = DIVIDERS[1][0] - residences[0]
+        ans_indices = [ int(res // divider) for res, divider in zip(residences, MINI_DIVIDER)]
 
         return data[ans_indices[0], ans_indices[1]]
 
