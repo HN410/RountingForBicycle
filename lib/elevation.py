@@ -29,8 +29,19 @@ class ElevationGetter():
     def __init__(self, settings_file = SETTINGS_FILE):
         with open(settings_file) as f:
             self.settings = json.load(f)
+        # 標高データが読み込まれる空リストを作っておく
+        self.data_list = self.nestingNoneList([self.SPLIT_N_UNITS[0], self.SPLIT_N_UNITS[0], 
+                                                self.SPLIT_N_UNITS[1], self.SPLIT_N_UNITS[1]])
+        
     
-
+    # sizeのサイズの空リストを作る
+    @classmethod
+    def nestingNoneList(cls, size):
+        if(size):
+            return [cls.nestingNoneList(size[:-1]) for i in range(size[-1])]
+        else:
+            return None
+    
     # その座標のデータがどのファイルに属するか調べる
     # 返されるのはインデックスのみ
     @classmethod
