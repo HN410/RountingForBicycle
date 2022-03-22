@@ -14,7 +14,8 @@ class ElevationGetter():
     GSI_DATA_FOLDER = "gsi_data_folder" # 国土地理院からダウンロードしたデータを入れたフォルダ
     CENTER_AREA_FOLDER = "5339" # 今回使うエリアのフォルダ 使える地域を広げたいときはこれを選べるように
     MAP_RANGE = [[35.333333333, 36.0], [139.0,140.0]] # 扱える範囲
-    SPLIT_N = [8, 8 * 10] # フォルダの階層ごとのマップの分割数
+    SPLIT_N_UNITS = [8, 10] 
+    SPLIT_N = [SPLIT_N_UNITS[0], SPLIT_N_UNITS[0] * SPLIT_N_UNITS[1]] # フォルダの階層ごとのマップの分割数
     DIVIDERS = [[ (ran[1] - ran[0]) / split_n for ran in MAP_RANGE ] for split_n in SPLIT_N]
     TARGET_FOLDER_SUFFIX = "DEM5A"
     FILE_SUFFIX = ".xml"
@@ -33,7 +34,7 @@ class ElevationGetter():
         if(dividents[0] < 0 or dividents[1] < 0):
             raise ValueError(self.OUT_OF_RANGE_ERROR)
         res = [[int(divident // divider) for divident, divider in zip(dividents, divider_list)] for divider_list in DIVIDERS]
-        res = res[0] + [divident % (self.SPLIT_N[1] // self.SPLIT_N[0]) for divident in res[1]]
+        res = res[0] + [divident % (self.SPLIT_N_UNITS[1]) for divident in res[1]]
         return res
 
         # resはファイルの番号を示すリストになる
