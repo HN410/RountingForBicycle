@@ -6,32 +6,34 @@ import glob
 import pathlib
 import xml.etree.ElementTree as ET 
 
+OUT_OF_RANGE_ERROR = "範囲外です．"
+ALREADY_RENAMED = "すでにリネームされています"
+
+SETTINGS_FILE = "settings.json"
+GSI_DATA_FOLDER = "gsi_data_folder" # 国土地理院からダウンロードしたデータを入れたフォルダ
+CENTER_AREA_FOLDER = "5339" # 今回使うエリアのフォルダ 使える地域を広げたいときはこれを選べるように
+MAP_RANGE = [[139.0,140.0], [35.333333333, 36.0]] # 扱える範囲
+SPLIT_N_UNITS = [8, 10] 
+SPLIT_N = [SPLIT_N_UNITS[0], SPLIT_N_UNITS[0] * SPLIT_N_UNITS[1]] # フォルダの階層ごとのマップの分割数
+TARGET_FOLDER_SUFFIX = "DEM5A"
+DIVIDERS = [[ (ran[1] - ran[0]) / split_n for ran in MAP_RANGE] for split_n in SPLIT_N]
+FILE_SUFFIX = ".xml"
+FOLDER_PREFIX = "_"
+MATRIX_SIZE = [150, 225] #ほとんどのファイルでこれは固定
+MINI_DIVIDER = [ (ran[1] - ran[0]) / (divider * SPLIT_N[1]) for ran, divider in zip(MAP_RANGE, MATRIX_SIZE)] # 1ファイル内でどこかを割り出すときに使う
+INVALID_VALUE = -1
+INVALID_TAG = "データなし"
+
 class ElevationGetter():
     # 緯度経度両方を格納するデータは経度を先に格納すること
     # matrixは横が第一次元
-    OUT_OF_RANGE_ERROR = "範囲外です．"
-    ALREADY_RENAMED = "すでにリネームされています"
-
-    SETTINGS_FILE = "settings.json"
-    GSI_DATA_FOLDER = "gsi_data_folder" # 国土地理院からダウンロードしたデータを入れたフォルダ
-    CENTER_AREA_FOLDER = "5339" # 今回使うエリアのフォルダ 使える地域を広げたいときはこれを選べるように
-    MAP_RANGE = [[139.0,140.0], [35.333333333, 36.0]] # 扱える範囲
-    SPLIT_N_UNITS = [8, 10] 
-    SPLIT_N = [SPLIT_N_UNITS[0], SPLIT_N_UNITS[0] * SPLIT_N_UNITS[1]] # フォルダの階層ごとのマップの分割数
-    DIVIDERS = [[ (ran[1] - ran[0]) / split_n for ran in MAP_RANGE ] for split_n in SPLIT_N]
-    TARGET_FOLDER_SUFFIX = "DEM5A"
-    FILE_SUFFIX = ".xml"
-    FOLDER_PREFIX = "_"
-    MATRIX_SIZE = [150, 225] # ほとんどのファイルでこれは固定
-    INVALID_VALUE = -1
-    INVALID_TAG = "データなし"
 
     def __init__(self, settings_file = SETTINGS_FILE):
         with open(settings_file) as f:
             self.settings = json.load(f)
         # 標高データが読み込まれる空リストを作っておく
-        self.data_list = self.nestingNoneList([self.SPLIT_N_UNITS[0], self.SPLIT_N_UNITS[0], 
-                                                self.SPLIT_N_UNITS[1], self.SPLIT_N_UNITS[1]])
+        self.data_list = self.nestingNoneList([SPLIT_N_UNITS[0], SPLIT_N_UNITS[0], 
+                                                SPLIT_N_UNITS[1], SPLIT_N_UNITS[1]])
         
     
     # sizeのサイズの空リストを作る
@@ -41,6 +43,7 @@ class ElevationGetter():
             return [cls.nestingNoneList(size[:-1]) for i in range(size[-1])]
         else:
             return None
+    
     
     # その座標のデータがどのファイルに属するか調べる
     # 返されるのはインデックスのみ
@@ -58,31 +61,31 @@ class ElevationGetter():
 
     # searchFileIndicesで得たインデックスを入力して，目的のファイルのパスを得る
     def getFilePathFromIndices(self, indices):
-        data_folder = os.path.join(self.settings[self.GSI_DATA_FOLDER], self.CENTER_AREA_FOLDER)
-        file_name = os.path.join(data_folder, self.FOLDER_PREFIX + str(indices[1]) + str(indices[0]))
-        file_name = os.path.join(file_name, "" + str(indices[3]) + str(indices[2]) + self.FILE_SUFFIX)
+        data_folder = os.path.join(self.settings[GSI_DATA_FOLDER], CENTER_AREA_FOLDER)
+        file_name = os.path.join(data_folder, FOLDER_PREFIX + str(indices[1]) + str(indices[0]))
+        file_name = os.path.join(file_name, "" + str(indices[3]) + str(indices[2]) + FILE_SUFFIX)
         return file_name
 
 
     # 使いやすいようにデータをリネームする
     # 一度実行すればもう実行しなくてよい
     def renameData(self):
-        data_folder = os.path.join(self.settings[self.GSI_DATA_FOLDER], self.CENTER_AREA_FOLDER)
+        data_folder = os.path.join(self.settings[GSI_DATA_FOLDER], CENTER_AREA_FOLDER)
         # 検索しやすいようにリネーム
         # フォルダを”_番号”の形式に統一
-        rename_list = glob.glob(os.path.join(data_folder,"*" + self.TARGET_FOLDER_SUFFIX))
+        rename_list = glob.glob(os.path.join(data_folder,"*" + TARGET_FOLDER_SUFFIX))
         if(len(rename_list) == 0):
-            print(self.ALREADY_RENAMED)
+            print(ALREADY_RENAMED)
             return 
         for path in rename_list:
-            os.rename(path, os.path.join(data_folder,self.FOLDER_PREFIX + path[-8:-6]))
+            os.rename(path, os.path.join(data_folder,FOLDER_PREFIX + path[-8:-6]))
 
         # ファイル名を"番号.xml"の形式に統一
         rename_list = glob.glob(os.path.join(
-                os.path.join(data_folder, self.FOLDER_PREFIX + "*"), "*" + self.FILE_SUFFIX)) 
+                os.path.join(data_folder, FOLDER_PREFIX + "*"), "*" + FILE_SUFFIX)) 
         for path in rename_list:
             parent_path = pathlib.Path(path).parent
-            os.rename(path, os.path.join(parent_path, path[-21:-19] + self.FILE_SUFFIX))
+            os.rename(path, os.path.join(parent_path, path[-21:-19] + FILE_SUFFIX))
 
     # xmlファイルの標高データのパース時に使用
     @classmethod
@@ -132,4 +135,28 @@ class ElevationGetter():
                 elevation = np.array(elevation)
                 elevation = elevation.reshape((-1, cls.MATRIX_SIZE[1]))
                 data[start_point[0]:] = elevation
+
+    # 入力された緯度，経度の標高を返す
+    def getElevation(self, coordinates: list):
+        coordinates = coordinates.copy()
+        coordinates.reverse() # このライブラリでは経度，緯度の順で取り扱う
+
+        indices = self.searchFileIndices(coordinates)
+        data = self.data[indices[0]][indices[1]][indices[2]][indices[3]]
+        if(data is None):
+            # まだ読み込んでいない
+            file_path = self.getFilePathFromIndices(indices)
+            data = self.getElevationMatrixFromFile(file_path)
+            self.data[indices[0]][indices[1]][indices[2]][indices[3]] = data
+        
+        # 余り
+        residence = [ coord % divider for coord, divider in zip(coordinates, DIVIDERS[1])]
+        ans_indices = [ int(res // divider) for res, divider in zip(residence, MINI_DIVIDER)]
+
+        return data[ans_indices[0], ans_indices[1]]
+
+
+        
+
+
 
