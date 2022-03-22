@@ -3,10 +3,12 @@ import numpy as np
 import pandas as pd 
 import os
 import glob
+import pathlib
 
 class ElevationGetter():
     # 緯度経度両方を格納するデータは緯度を先に格納すること
     OUT_OF_RANGE_ERROR = "範囲外です．"
+    ALREADY_RENAMED = "すでにリネームされています"
 
     SETTINGS_FILE = "settings.json"
     GSI_DATA_FOLDER = "gsi_data_folder" # 国土地理院からダウンロードしたデータを入れたフォルダ
@@ -14,6 +16,8 @@ class ElevationGetter():
     MAP_RANGE = [[35.333333333, 36.0], [139.0,140.0]] # 扱える範囲
     SPLIT_N = [8, 8 * 10] # フォルダの階層ごとのマップの分割数
     DIVIDERS = [[ (ran[1] - ran[0]) / split_n for ran in MAP_RANGE ] for split_n in SPLIT_N]
+    TARGET_FOLDER_SUFFIX = "DEM5A"
+    FILE_SUFFIX = ".xml"
 
     def __init__(self, settings_file = SETTINGS_FILE):
         with open(settings_file) as f:
@@ -30,4 +34,26 @@ class ElevationGetter():
 
         # resはファイルの番号を示すリストになる
         # 以下のようにパスを接合すれば求めたファイルが見つかる
+    
+    # 使いやすいようにデータをリネームする
+    # 一度実行すればもう実行しなくてよい
+    def renameData(self):
+        data_folder = os.path.join(self.settings[self.GSI_DATA_FOLDER], self.CENTER_AREA_FOLDER)
+        # 検索しやすいようにリネーム
+        # フォルダを”_番号”の形式に統一
+        FOLDER_PREFIX = "_"
+        rename_list = glob.glob(os.path.join(data_folder,"*" + self.TARGET_FOLDER_SUFFIX))
+        if(len(rename_list) == 0):
+            print(self.ALREADY_RENAMED)
+            return 
+        for path in rename_list:
+            os.rename(path, os.path.join(data_folder,FOLDER_PREFIX + path[-8:-6]))
+
+        # ファイル名を"番号.xml"の形式に統一
+        FOLDER_PREFIX = "_"
+        rename_list = glob.glob(os.path.join(
+                os.path.join(data_folder,FOLDER_PREFIX + "*"), "*" + self.FILE_SUFFIX)) 
+        for path in rename_list:
+            parent_path = pathlib.Path(path).parent
+            os.rename(path, os.path.join(parent_path, path[-21:-19] + self.FILE_SUFFIX))
 
