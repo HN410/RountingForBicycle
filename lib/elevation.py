@@ -18,41 +18,51 @@ class ElevationGetter():
     DIVIDERS = [[ (ran[1] - ran[0]) / split_n for ran in MAP_RANGE ] for split_n in SPLIT_N]
     TARGET_FOLDER_SUFFIX = "DEM5A"
     FILE_SUFFIX = ".xml"
+    FOLDER_PREFIX = "_"
 
     def __init__(self, settings_file = SETTINGS_FILE):
         with open(settings_file) as f:
             self.settings = json.load(f)
     
+
     # その座標のデータがどのファイルに属するか調べる
-    def searchFile(self, coordinates):
+    # 返されるのはインデックスのみ
+    def searchFileIndices(self, coordinates):
         coordinate = [35.702, 139.28]
         dividents = [co - ran[0] for co, ran in zip(coordinate, self.MAP_RANGE)]
         if(dividents[0] < 0 or dividents[1] < 0):
             raise ValueError(self.OUT_OF_RANGE_ERROR)
         res = [[int(divident // divider) for divident, divider in zip(dividents, divider_list)] for divider_list in DIVIDERS]
-        res[1] = [divident % (self.SPLIT_N[1] // self.SPLIT_N[0]) for divident in res[1]]
+        res = res[0] + [divident % (self.SPLIT_N[1] // self.SPLIT_N[0]) for divident in res[1]]
+        return res
 
         # resはファイルの番号を示すリストになる
         # 以下のようにパスを接合すれば求めたファイルが見つかる
-    
+
+    # searchFileIndicesで得たインデックスを入力して，目的のファイルのパスを得る
+    def getFilePathFromIndices(self, indices):
+        data_folder = os.path.join(self.settings[self.GSI_DATA_FOLDER], self.CENTER_AREA_FOLDER)
+        file_name = os.path.join(data_folder, self.FOLDER_PREFIX + str(indices[0]) + str(indices[1]))
+        file_name = os.path.join(file_name, "" + str(indices[2]) + str(indices[3]) + self.FILE_SUFFIX)
+        return file_name
+
+
     # 使いやすいようにデータをリネームする
     # 一度実行すればもう実行しなくてよい
     def renameData(self):
         data_folder = os.path.join(self.settings[self.GSI_DATA_FOLDER], self.CENTER_AREA_FOLDER)
         # 検索しやすいようにリネーム
         # フォルダを”_番号”の形式に統一
-        FOLDER_PREFIX = "_"
         rename_list = glob.glob(os.path.join(data_folder,"*" + self.TARGET_FOLDER_SUFFIX))
         if(len(rename_list) == 0):
             print(self.ALREADY_RENAMED)
             return 
         for path in rename_list:
-            os.rename(path, os.path.join(data_folder,FOLDER_PREFIX + path[-8:-6]))
+            os.rename(path, os.path.join(data_folder,self.FOLDER_PREFIX + path[-8:-6]))
 
         # ファイル名を"番号.xml"の形式に統一
-        FOLDER_PREFIX = "_"
         rename_list = glob.glob(os.path.join(
-                os.path.join(data_folder,FOLDER_PREFIX + "*"), "*" + self.FILE_SUFFIX)) 
+                os.path.join(data_folder, self.FOLDER_PREFIX + "*"), "*" + self.FILE_SUFFIX)) 
         for path in rename_list:
             parent_path = pathlib.Path(path).parent
             os.rename(path, os.path.join(parent_path, path[-21:-19] + self.FILE_SUFFIX))
