@@ -29,11 +29,10 @@ class ElevationGetter():
     # その座標のデータがどのファイルに属するか調べる
     # 返されるのはインデックスのみ
     def searchFileIndices(self, coordinates):
-        coordinate = [35.702, 139.28]
-        dividents = [co - ran[0] for co, ran in zip(coordinate, self.MAP_RANGE)]
+        dividents = [co - ran[0] for co, ran in zip(coordinates, self.MAP_RANGE)]
         if(dividents[0] < 0 or dividents[1] < 0):
             raise ValueError(self.OUT_OF_RANGE_ERROR)
-        res = [[int(divident // divider) for divident, divider in zip(dividents, divider_list)] for divider_list in DIVIDERS]
+        res = [[int(divident // divider) for divident, divider in zip(dividents, divider_list)] for divider_list in self.DIVIDERS]
         res = res[0] + [divident % (self.SPLIT_N_UNITS[1]) for divident in res[1]]
         return res
 
@@ -43,8 +42,8 @@ class ElevationGetter():
     # searchFileIndicesで得たインデックスを入力して，目的のファイルのパスを得る
     def getFilePathFromIndices(self, indices):
         data_folder = os.path.join(self.settings[self.GSI_DATA_FOLDER], self.CENTER_AREA_FOLDER)
-        file_name = os.path.join(data_folder, self.FOLDER_PREFIX + str(indices[0]) + str(indices[1]))
-        file_name = os.path.join(file_name, "" + str(indices[2]) + str(indices[3]) + self.FILE_SUFFIX)
+        file_name = os.path.join(data_folder, self.FOLDER_PREFIX + str(indices[1]) + str(indices[0]))
+        file_name = os.path.join(file_name, "" + str(indices[3]) + str(indices[2]) + self.FILE_SUFFIX)
         return file_name
 
 
