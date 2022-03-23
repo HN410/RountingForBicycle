@@ -105,6 +105,7 @@ class ElevationGetter():
         # 開始地点
         start_point = root[2][7][3][0][1].text
         start_point = [int(point) for point in start_point.split(" ")]
+        start_point.reverse()
 
         # 標高データを得る
         elevation = root[2][7][2][0][1].text.strip()
@@ -112,12 +113,15 @@ class ElevationGetter():
         elevation = [ cls.elevationElementsParser(element) for element in  elevation ]
         # start_pointに基づき，データを埋めていく
         data = None
+
+        # 末尾のデータなしを埋める
+        data_len = (MATRIX_SIZE[0]  - start_point[0])* MATRIX_SIZE[1] - start_point[1]
+        if(len(elevation) != data_len):
+            # 末尾のデータなしが省略されている
+            elevation = elevation + [INVALID_VALUE] * (data_len - len(elevation))
+
         if(start_point[0] == 0 and start_point[1] == 0):
             # 全域にデータあり
-            data_len = MATRIX_SIZE[0] * MATRIX_SIZE[1]
-            if(len(elevation) != data_len):
-                # 末尾のデータなしが省略されている
-                elevation = elevation + [INVALID_VALUE] * (data_len - len(elevation))
             data = np.array(elevation).reshape(MATRIX_SIZE)
         else:
             # 途中からデータが始まる
