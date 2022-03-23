@@ -1,18 +1,8 @@
 from .elevation import ElevationGetter
-import json 
 import numpy as np 
-import pandas as pd 
-import os
-import glob
-import pathlib
-import xml.etree.ElementTree as ET 
-import folium
 import osmnx as ox
-import pandas as pd
 import numpy as np 
-import geopandas as gpd
 from lib.elevation import ElevationGetter
-import pickle
 
 R = 6370
 L_D = 2 * np.pi * R / 360 * 1000 # 1度当たりの距離(m)
@@ -32,6 +22,8 @@ class GradDistance():
 
     # 無向グラフだと仮定して，傾斜があったらすべて値を大きくする
     def calcGradDisUnit(self, x0, y0, x1, y1, dist):
+        if(dist == 0):
+            return 0
         ele0 = self.elevation_getter.getElevation([y0, x0]) # 緯度が先なので注意
         ele1 = self.elevation_getter.getElevation([y1, x1])
         grad = np.abs(ele0 - ele1) / dist
