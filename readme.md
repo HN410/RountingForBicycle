@@ -20,6 +20,9 @@
 
 ### 実行例
 通常の最短経路
-![](.\example\0.png)
+
+![](/example/0.png)
+
 傾斜をよけた場合の最短経路
-![](.\example\1.png)
+
+![](/example/1.png)
