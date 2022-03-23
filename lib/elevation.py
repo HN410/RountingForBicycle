@@ -39,7 +39,7 @@ class ElevationGetter():
     @classmethod
     def nestingNoneList(cls, size):
         if(size):
-            return [cls.nestingNoneList(size[:-1]) for i in range(size[-1])]
+            return [cls.nestingNoneList(size[1:]) for i in range(size[0])]
         else:
             return None
     
@@ -114,6 +114,10 @@ class ElevationGetter():
         data = None
         if(start_point[0] == 0 and start_point[1] == 0):
             # 全域にデータあり
+            data_len = MATRIX_SIZE[0] * MATRIX_SIZE[1]
+            if(len(elevation) != data_len):
+                # 末尾のデータなしが省略されている
+                elevation = elevation + [INVALID_VALUE] * (data_len - len(elevation))
             data = np.array(elevation).reshape(MATRIX_SIZE)
         else:
             # 途中からデータが始まる
